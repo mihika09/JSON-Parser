@@ -1,18 +1,20 @@
 # Before modification of the array_parser
 
+map_whitespace = [' ', '\n', '\t']
+json_whitespace = ['\t', '\\n', '\\t', '\\f', '\\r']
 
-json_whitespace = [' ', '\n', '\t', '\\n', '\\t', '\\f', '\\r']
-map_whitespace = {}
 
-""" 
-have to remove the ' ' from the json_whitespace list, as when reading a string with blanks we want to read the blanks 
-rather than replace it with something
-"""
+def remove_whitespace(s):
+
+    while len(s) > 0 and s[0] in map_whitespace:
+        s = s[1:]
+    return s
 
 
 # Null Parser
 def null_parser(s):
 
+    s = remove_whitespace(s)
     if len(s) >= 4 and s[0:4] == 'null':
         return None, s[4:]
 
@@ -23,6 +25,7 @@ def null_parser(s):
 # Bool Parser
 def bool_parser(s):
 
+    s = remove_whitespace(s)
     if len(s) >= 4 and s[0:4] == 'true':
         return True, s[4:]
 
@@ -36,6 +39,7 @@ def bool_parser(s):
 # Num Parser
 def num_parser(s):
 
+    s = remove_whitespace(s)
     jtoken = ''
     i = 0
     l = len(s)
@@ -53,16 +57,14 @@ def num_parser(s):
 # String Parser
 def string_parser(s):
 
-    s = s.strip()
-
-    jtoken = ''
+    s = remove_whitespace(s)
 
     if s[0] == '"':
+        jtoken = ''
         s = s[1:]
         i = 0
 
-        while s[i] != '"':
-
+        while i<len(s) and s[i] != '"':
             jtoken += s[i]
             i += 1
 
@@ -76,154 +78,103 @@ def string_parser(s):
 # Array Parser
 def array_parser(s):
 
-    if s[0] == '[':
-        lst = []
+    s = remove_whitespace(s)
 
-        # check for empty array
-        if s[0:2] == '[]':
-            return lst, s[2:]
+    if s[0] != '[':
+        return None
 
-        s = s[1:]
-        flag = 0
+    lst = []
+    """if s[0:2] == '[]':
+        return lst, s[2:]"""
 
-        while len(s) > 0:
+    s = s[1:]
 
-            while s[0] in json_whitespace:
+    while len(s) > 0:
+
+        tmp = value_parser(s)
+
+        if tmp is None:
+            return None
+
+        lst.append(tmp[0])
+        s = tmp[1]
+
+        s = remove_whitespace(s)
+
+        try:
+            if s[0] == ',':
                 s = s[1:]
 
-            tmp = value_parser(s)
-
-            if tmp is not None:
-
-                lst.append(tmp[0])
-                s = tmp[1]
-
-                # removing spaces before limiter (,)
-                while len(s) > 0 and s[0] in json_whitespace:
-                        s = s[1:]
-
-                if s[0] == ']':
-                    s = s[1:]
-                    flag = 1
-                    break
-
-                elif s[0] == ',':
-                    try:
-                        s = s[1:]
-                    except:
-                        return None
-
-                else:
-                    return None
-
-                while len(s) > 0 and s[0] in json_whitespace:
-                    s = s[1:]
+            elif s[0] == ']':
+                return lst, s[1:]
 
             else:
                 return None
 
-        if flag == 1:
-            return lst, s
-
-        else:
+        except IndexError:
             return None
 
-    else:
-        return None
+    return None
 
 
 def object_parser(s):
+    s = remove_whitespace(s)
 
-    if s[0] == '{':
+    if s[0] != '{':
+        return None
 
-        flag = 0
-        dct = {}
+    dct = {}
+    s = s[1:]
 
-        # check for empty object
-        if s[0:2] == '{}':
-            return dct, s[2:]
+    try:
 
-        s = s[1:]
+        while s[0] != '}':
 
-        while len(s) > 0:
-
-            while s[0] in json_whitespace:
-                s = s[1:]
-
-            # print("s[0]: ", s[0], "s[1]: ", s[1])
-
-            # checking for a
             tmp = string_parser(s)
-            if tmp is not None:
-                a = tmp[0]
-                s = tmp[1]
 
-            else:
+            if tmp is None:
+                return tmp
+
+            a, s = tmp
+            s = remove_whitespace(s)
+
+            if s[0] != ':':
                 return None
 
-            while len(s) > 0 and s[0] in json_whitespace:
-                s = s[1:]
-
-            # checking for ':' separator
-            if s[0] == ':':
-                s = s[1:]
-
-            else:
-                return None
-
-            while len(s) > 0 and s[0] in json_whitespace:
-                s = s[1:]
-
-            # checking for b
-
-            # print("s[0]b: ", s[0])
+            s = s[1:]
             tmp = value_parser(s)
 
-            if tmp is not None:
+            if tmp is None:
+                return None
 
-                b = tmp[0]
-                s = tmp[1]
-                dct[a] = b
-
-                if len(s) > 0:
-                    while s[0] in json_whitespace:
-                        s = s[1:]
-
-                    if s[0] == '}':
-                        s = s[1:]
-                        flag = 1
-                        break
-
-                    elif s[0] == ',':
-                        try:
-                            s = s[1:]
-                        except:
-                            return None
-
-                    else:
-                        return None
-
-                while s[0] in json_whitespace:
+            dct[a], s = tmp
+            s = remove_whitespace(s)
+            try:
+                if s[0] == ',':
                     s = s[1:]
 
-        if flag == 1:
-            return dct, s
+                # elif s[0] == '}':
+                #    return dct, s[1:]
 
-        else:
-            return None
+                elif s[0] != '}':
+                    return None
 
-    else:
+            except IndexError:
+                return None
+
+        return dct, s[1:]
+
+    except IndexError:
         return None
 
 
 def value_parser(s):
-
     parsers = [null_parser, bool_parser, num_parser, string_parser, array_parser, object_parser]
 
     for i in parsers:
 
         res = i(s)
-        
+
         if res is not None:
             return res
 
@@ -232,21 +183,9 @@ def value_parser(s):
 
 if __name__ == '__main__':
 
-    file = open("/Users/mallikamohta/Desktop/JSONInput.json", "r")
-    json_string = file.read()
-    print(json_string)
-
-    """while len(json_string) > 0:
-        if json_string[0] in json_whitespace:
-            json_string = json_string[1:]
-
-        json_string = json_string.strip()
-
-        print("s[0]: ", json_string[0])
-        json_string = json_string[1:]"""
-
-
-
+    """file = open("/Users/mallikamohta/Desktop/JSONInput.json", "r")
+    json_string = file.read()"""
+    json_string = input()
     r = value_parser(json_string)
 
     if r is None:
