@@ -1,3 +1,5 @@
+import re
+
 check_whitespace = [' ', '\n', '\t']
 map_whitespace = {"\"": "\"", "\\": '\\', "b": "\b", "f": "\f", "n": "\n", "r": "\r", "t": "\t"}
 
@@ -33,17 +35,16 @@ def bool_parser(s):
 def num_parser(s):
 
     s = remove_whitespace(s)
-    jtoken = ''
-    i = 0
-    l = len(s)
-    while i < l and 48 <= ord(s[i]) <= 57:
-        jtoken += s[i]
-        i += 1
+    x = re.search(r'^[-]?\d+(\.\d+)?([eE][+-]?\d+)?', s)
+    if x:
+        try:
+            a = int(x.group())
+        except ValueError:
+            a = float(x.group())
 
-    try:
-        return int(jtoken), s[i:]
+        return a, s[x.end():]
 
-    except:
+    else:
         return None
 
 
@@ -61,7 +62,7 @@ def string_parser(s):
                 try:
                     jtoken += map_whitespace[s[1]]
                     s = s[2:]
-                except:
+                except KeyError:
                     return None
 
             else:
