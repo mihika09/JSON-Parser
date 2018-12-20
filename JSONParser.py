@@ -1,28 +1,23 @@
-# Before modification of the array_parser
-
-map_whitespace = [' ', '\n', '\t']
-json_whitespace = ['\t', '\\n', '\\t', '\\f', '\\r']
+check_whitespace = [' ', '\n', '\t']
+map_whitespace = {"\"": "\"", "\\": '\\', "b": "\b", "f": "\f", "n": "\n", "r": "\r", "t": "\t"}
 
 
 def remove_whitespace(s):
 
-    while len(s) > 0 and s[0] in map_whitespace:
+    while len(s) > 0 and s[0] in check_whitespace:
         s = s[1:]
     return s
 
 
-# Null Parser
 def null_parser(s):
 
     s = remove_whitespace(s)
     if len(s) >= 4 and s[0:4] == 'null':
         return None, s[4:]
 
-    else:
-        return None
+    return None
 
 
-# Bool Parser
 def bool_parser(s):
 
     s = remove_whitespace(s)
@@ -32,11 +27,9 @@ def bool_parser(s):
     elif len(s) >= 5 and s[0:5] == 'false':
         return False, s[5:]
 
-    else:
-        return None
+    return None
 
 
-# Num Parser
 def num_parser(s):
 
     s = remove_whitespace(s)
@@ -54,7 +47,6 @@ def num_parser(s):
         return None
 
 
-# String Parser
 def string_parser(s):
 
     s = remove_whitespace(s)
@@ -62,30 +54,37 @@ def string_parser(s):
     if s[0] == '"':
         jtoken = ''
         s = s[1:]
-        i = 0
 
-        while i<len(s) and s[i] != '"':
-            jtoken += s[i]
-            i += 1
+        while s[0] != '"':
 
-        if i < len(s) and s[i] == '"':
-            s = s[i + 1:]
+            if s[0] == '\\':
+                try:
+                    jtoken += map_whitespace[s[1]]
+                    s = s[2:]
+                except:
+                    return None
+
+            else:
+                jtoken += s[0]
+                s = s[1:]
+
+        if len(s) > 0 and s[0] == '"':
+            s = s[1:]
             return jtoken, s
 
-    return None
+        else:
+            return None
 
 
-# Array Parser
 def array_parser(s):
-
     s = remove_whitespace(s)
 
     if s[0] != '[':
         return None
 
     lst = []
-    """if s[0:2] == '[]':
-        return lst, s[2:]"""
+    if s[0:2] == '[]':
+        return lst, s[2:]
 
     s = s[1:]
 
@@ -153,9 +152,6 @@ def object_parser(s):
                 if s[0] == ',':
                     s = s[1:]
 
-                # elif s[0] == '}':
-                #    return dct, s[1:]
-
                 elif s[0] != '}':
                     return None
 
@@ -183,9 +179,9 @@ def value_parser(s):
 
 if __name__ == '__main__':
 
-    """file = open("/Users/mallikamohta/Desktop/JSONInput.json", "r")
-    json_string = file.read()"""
-    json_string = input()
+    file = open("/Users/mallikamohta/Desktop/JSONInput.json", "r")
+    json_string = file.read()
+
     r = value_parser(json_string)
 
     if r is None:
