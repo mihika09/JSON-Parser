@@ -59,11 +59,22 @@ def string_parser(s):
         while s[0] != '"':
 
             if s[0] == '\\':
-                try:
-                    jtoken += map_whitespace[s[1]]
+                if s[1] == 'u':
+                    jtoken += s[0:2]
                     s = s[2:]
-                except KeyError:
-                    return None
+                    x = re.search(r'[A-F0-9]{4}\"', s)
+                    if x:
+                        jtoken += x.group()
+                        s = s[4:]
+                    else:
+                        return None
+
+                else:
+                    try:
+                        jtoken += map_whitespace[s[1]]
+                        s = s[2:]
+                    except KeyError:
+                        return None
 
             else:
                 jtoken += s[0]
@@ -104,7 +115,6 @@ def array_parser(s):
         try:
             if s[0] == ',':
                 s = s[1:]
-
             elif s[0] == ']':
                 return lst, s[1:]
 
@@ -152,7 +162,6 @@ def object_parser(s):
             try:
                 if s[0] == ',':
                     s = s[1:]
-
                 elif s[0] != '}':
                     return None
 
@@ -169,9 +178,7 @@ def value_parser(s):
     parsers = [null_parser, bool_parser, num_parser, string_parser, array_parser, object_parser]
 
     for i in parsers:
-
         res = i(s)
-
         if res is not None:
             return res
 
@@ -182,9 +189,7 @@ if __name__ == '__main__':
 
     file = open("/Users/mallikamohta/Desktop/JSONInput.json", "r")
     json_string = file.read()
-
     r = value_parser(json_string)
-
     if r is None:
         print("Value Error: No JSON object could be decoded")
     else:
